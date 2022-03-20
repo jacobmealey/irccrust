@@ -7,11 +7,13 @@
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
+use std::thread;
+
+const ADDR: &str = "localhost:3030";
 
 fn main() {
-    // bind to localhost:3030 how can we make the address and port
-    // constants or "predefine macros" like in C
-    let listener = match TcpListener::bind("localhost:3030") {
+    // bind to address ADDR 
+    let listener = match TcpListener::bind(ADDR) {
         Ok(listener) => listener,
         Err(e) => {panic!("Error binding to TCP socket: {}", e);}
     };
@@ -20,23 +22,28 @@ fn main() {
     // a time, we /should/ open a new thread everytime we get a 
     // connection
     for stream in listener.incoming() {
-        // we loop to ensure that stream stays in scope and 
-        // is not dropped (thus killing the connection)
-        loop {
-            let stream = match stream {
-                Ok(ref stream) => stream,
-                Err(_e) => {panic!("Error in stream :(");}
-            };
-            let num = handle_connection(&stream);
-            println!("Wrote {} bytes", num);
-            // if zero, no bytes written connection is closed
-            // (do we know that for sure?)
-            // break out of 'loop' and scan for new connections
-            if num == 0 {
-                break;
+        // create a thread for each no connection. I don't really
+        // konw how to handle this properly but it doesn't seem
+        // terribel?
+        let thread = thread::spawn(|| {
+            // we loop to ensure that stream stays in scope and 
+            // is not dropped (thus killing the connection)
+            loop {
+                let stream = match stream {
+                    Ok(ref stream) => stream,
+                    Err(_e) => {panic!("Error in stream :(");}
+                };
+                let num = handle_connection(&stream);
+                println!("Wrote {} bytes", num);
+                // if zero, no bytes written connection is closed
+                // (do we know that for sure?)
+                // break out of 'loop' and scan for new connections
+                if num == 0 {
+                    break;
+                }
             }
-        }
-        
+
+        });
     }
     
 }
