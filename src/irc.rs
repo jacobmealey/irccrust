@@ -55,7 +55,9 @@ pub mod channel {
         }
     }
 
+    // Channel methods 
     impl<'a> Channel<'a> {
+        // add a user to this channel
         pub fn add_user(&mut self, user: &'a User) {
             // only add the user if they aren't in the list
             if self.users.get(&user.name).is_none() {
@@ -63,7 +65,15 @@ pub mod channel {
             }
         }
 
+        pub fn delete_user(&mut self, user: &'a User) {
+            self.users.remove(&user.name);
+        }
+
+        // get_users takes no arguments, returns iterator where
+        // each element of the iterator is a tuple with the order
+        // (username, user_instance)
         pub fn get_users(&mut self) -> IntoIter<String, &'a User> {
+            // create a clone of the users map, convert to iterator
             return self.users.clone().into_iter();
         }
 
