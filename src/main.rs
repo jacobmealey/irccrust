@@ -20,6 +20,8 @@ fn main() {
     // a time, we /should/ open a new thread everytime we get a 
     // connection
     for stream in listener.incoming() {
+        // we loop to ensure that stream stays in scope and 
+        // is not dropped (thus killing the connection)
         loop {
             let stream = match stream {
                 Ok(ref stream) => stream,
