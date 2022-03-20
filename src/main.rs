@@ -1,21 +1,24 @@
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
-use std::net::Shutdown;
 
 fn main() {
     let listener = TcpListener::bind("localhost:3030").unwrap();
 
     for stream in listener.incoming() {
-        loop{
+        loop {
             match stream {
                 Ok(ref stream) => {
                     let num = handle_connection(&stream);
                     println!("Wrote {} bytes", num);
+                    if num == 0 {
+                        break;
+                    }
                 }
                 Err(ref _e) => {println!("Error in stream :(");}
             }
         }
+        
     }
     
 }
@@ -33,9 +36,16 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
     
     let num = response.len();
 
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
-    //stream.shutdown(Shutdown::Both).expect("Shutdown call failed");
+    match stream.write(response.as_bytes()) {
+        Ok(_) => {
+            stream.flush().unwrap();
+            return num;
+        }
+        Err(_e) => {
+            //stream.shutdown(Shutdown::Both).expect("Shutdown call failed");
+            println!("Connection Closed");
+            return 0;
+        }
+    }
     
-    return num;
 }
