@@ -8,6 +8,8 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
+use crate::irc::channel;
+mod irc;
 
 const ADDR: &str = "localhost:3030";
 
@@ -17,6 +19,16 @@ fn main() {
         Ok(listener) => listener,
         Err(e) => {panic!("Error binding to TCP socket: {}", e);}
     };
+
+    let channel = irc::channel::Channel {
+        users: Vec::<irc::User>::new(),
+        priv_users: Vec::<irc::User>::new(),
+        flag: Vec::<irc::channel::Flags>::new(),
+        name: String::from("channel"),
+        topic: String::from(""),
+        key: String::from("passwd")
+    };
+    
 
     // currently we are only listening to a single connection at 
     // a time, we /should/ open a new thread everytime we get a 
