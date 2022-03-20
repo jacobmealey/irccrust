@@ -8,7 +8,7 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
-use crate::irc::channel;
+use std::collections::HashMap;
 mod irc;
 
 const ADDR: &str = "localhost:3030";
@@ -20,14 +20,17 @@ fn main() {
         Err(e) => {panic!("Error binding to TCP socket: {}", e);}
     };
 
-    let channel = irc::channel::Channel {
-        users: Vec::<irc::User>::new(),
-        priv_users: Vec::<irc::User>::new(),
-        flag: Vec::<irc::channel::Flags>::new(),
+    let mut channel = irc::channel::Channel {
+        users: HashMap::<String, &irc::User>::new(),
+        priv_users: HashMap::<String, &irc::User>::new(),
+        flag: irc::channel::Flags::new(),
         name: String::from("channel"),
         topic: String::from(""),
         key: String::from("passwd")
     };
+
+    let user = irc::User {name: String::from("name")};
+    channel.add_user(&user);
     
 
     // currently we are only listening to a single connection at 
