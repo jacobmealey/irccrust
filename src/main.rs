@@ -11,8 +11,14 @@ use std::net::TcpStream;
 fn main() {
     // bind to localhost:3030 how can we make the address and port
     // constants or "predefine macros" like in C
-    let listener = TcpListener::bind("localhost:3030").unwrap();
+    let listener = match TcpListener::bind("localhost:3030") {
+        Ok(listener) => listener,
+        Err(e) => {panic!("Error binding to TCP socket: {}", e);}
+    };
 
+    // currently we are only listening to a single connection at 
+    // a time, we /should/ open a new thread everytime we get a 
+    // connection
     for stream in listener.incoming() {
         loop {
             match stream {
@@ -39,6 +45,9 @@ fn main() {
 // Handle connection takes a TcpStream and returns the
 // amount of bytes written to the stream. It reads a 
 // 1024 bytes at a time from the TcpStream
+//
+// Ideally it should return a Result<> and have the err
+// handled properly
 fn handle_connection(mut stream: &TcpStream) -> usize {
     // set buffer to size of 1024 and read from TcpStream 
     let mut buffer = [0; 1024];
