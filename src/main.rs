@@ -21,20 +21,17 @@ fn main() {
     // connection
     for stream in listener.incoming() {
         loop {
-            match stream {
-                Ok(ref stream) => {
-                    let num = handle_connection(&stream);
-                    println!("Wrote {} bytes", num);
-                    // if zero, no bytes written connection is closed
-                    // (do we know that for sure?)
-                    // break out of 'loop' and scan for new connections
-                    if num == 0 {
-                        break;
-                    }
-                }
-                // Not sure what type of errors there could be,
-                // so we'll find out if things break
-                Err(ref _e) => {println!("Error in stream :(");}
+            let stream = match stream {
+                Ok(ref stream) => stream,
+                Err(_e) => {panic!("Error in stream :(");}
+            };
+            let num = handle_connection(&stream);
+            println!("Wrote {} bytes", num);
+            // if zero, no bytes written connection is closed
+            // (do we know that for sure?)
+            // break out of 'loop' and scan for new connections
+            if num == 0 {
+                break;
             }
         }
         
