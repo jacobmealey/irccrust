@@ -1,5 +1,9 @@
 pub struct User {
-    pub name: String
+    pub name: String,
+    //pub host: String,
+    //pub localname: String,
+    //pub server: String,
+    //pub user: bool, // Defines between user and service
 }
 
 
@@ -75,6 +79,10 @@ pub mod channel {
         pub fn get_users(&mut self) -> IntoIter<String, &'a User> {
             // create a clone of the users map, convert to iterator
             return self.users.clone().into_iter();
+        }
+
+        pub fn set_topic(&mut self, topic: String) {
+            self.topic = topic;
         }
 
     }

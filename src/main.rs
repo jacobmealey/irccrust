@@ -73,11 +73,16 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
     // set buffer to size of 1024 and read from TcpStream 
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
+
+    // search for first null character in array
+    let len = buffer.iter().position(|&p| p == 0).unwrap();
+
     
-    println!("Request from: {}", String::from_utf8_lossy(&buffer[..]));
+    println!("Request from: {}", String::from_utf8_lossy(&buffer[0..len]));
 
     // convert the input to uppercase
-    let response = String::from_utf8_lossy(&buffer[..]).to_uppercase();
+    let mut response = String::from_utf8_lossy(&buffer[0..len]).to_uppercase();
+    //response = response.chars().filter(|c| c.is_ascii()).collect::<String>();
     
     // set num (the return value)
     let num = response.len();
