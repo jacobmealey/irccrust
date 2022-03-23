@@ -89,9 +89,9 @@ pub mod channel {
 }
 
 #[repr(u32)]
-// if the enum value isn't used it causes a warning
+// if the enum value isn't used and 
 #[allow(dead_code)]
-pub enum Responses {
+pub enum Response {
     RplWelcome=001,
     RplYourhosT=002,
     RplCreated=003,
@@ -180,8 +180,9 @@ pub enum Responses {
 pub mod commandf {
     // registration -- generates the string to send when a new connection
     // is made.
-    pub fn server_client(host: &String, numeric: u32, username: &String, message: &String) -> String {
-        return format!(":{} {:0>3} {} :{}!!!\n", host, numeric, username, message);
+    use crate::irc::Response;
+    pub fn server_client(host: &String, numeric: Response, username: &String, message: &String) -> String {
+        return format!(":{} {:0>3} {} :{}!!!\n", host, numeric as u32, username, message);
     }
 }
 
