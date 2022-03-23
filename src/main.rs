@@ -87,7 +87,7 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
     let host = String::from("localhost");
     let username = String::from("manj-gnome");
     let message = String::from("Welcome to IRCrust");
-    let registration = irc::commands::registration(&host, &username, &message);
+    let registration = irc::commandf::registration(&host, &username, &message);
     
     // need to match the wrte() to see if the error connection is still
     // alive, not sure why we don't need to do it on the read (we probs should)
