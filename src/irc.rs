@@ -87,6 +87,10 @@ pub mod channel {
 
     }
 }
+
+#[repr(u32)]
+// if the enum value isn't used it causes a warning
+#[allow(dead_code)]
 pub enum Responses {
     RplWelcome=001,
     RplYourhosT=002,
@@ -176,8 +180,8 @@ pub enum Responses {
 pub mod commandf {
     // registration -- generates the string to send when a new connection
     // is made.
-    pub fn registration(host: &String, username: &String, message: &String) -> String {
-        return format!(":{} 001 {} :{}!!!\n", host, username, message);
+    pub fn server_client(host: &String, numeric: u32, username: &String, message: &String) -> String {
+        return format!(":{} {:0>3} {} :{}!!!\n", host, numeric, username, message);
     }
 }
 
