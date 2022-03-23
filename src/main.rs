@@ -81,22 +81,17 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
 
     // convert the input to uppercase
     // slice index only to the length of the string
-    let response = String::from_utf8_lossy(&buffer[0..len]).to_uppercase();
-    let mut response = "manj-gnome!jacob@localhost JOIN #CHAN";
-    let mut channel_message = ":localhost 332 #CHAN: Hello, buddy boy :)";
-    let mut users = "manj-gnome!jacob@localhost";
-    let rpl_topic = 332;
+    let _response = String::from_utf8_lossy(&buffer[0..len]).to_uppercase();
     
     //let final_response = format!("{} {} {}", response, channel_message, users);
-    let final_response = ":localhost 001 manj-gnome :Yooooo!!!\n";
-    
-    //let final_response = final_response.as_bytes();
-    
-
+    let host = String::from("localhost");
+    let username = String::from("manj-gnome");
+    let message = String::from("Welcome to IRCrust");
+    let registration = irc::commands::registration(&host, &username, &message);
     
     // need to match the wrte() to see if the error connection is still
     // alive, not sure why we don't need to do it on the read (we probs should)
-    match stream.write(final_response.as_bytes()) {
+    match stream.write(registration.as_bytes()) {
         Ok(_) => {
             stream.flush().unwrap();
             return len;
@@ -110,3 +105,4 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
     }
     
 }
+
