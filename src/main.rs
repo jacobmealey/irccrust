@@ -76,23 +76,30 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
 
     // search for first null character in array
     let len = buffer.iter().position(|&p| p == 0).unwrap();
-
     
-    println!("Request from: {}", String::from_utf8_lossy(&buffer[0..len]));
+    println!("{}", String::from_utf8_lossy(&buffer[..]));
 
     // convert the input to uppercase
-    let mut response = String::from_utf8_lossy(&buffer[0..len]).to_uppercase();
-    //response = response.chars().filter(|c| c.is_ascii()).collect::<String>();
+    // slice index only to the length of the string
+    let response = String::from_utf8_lossy(&buffer[0..len]).to_uppercase();
+    let mut response = "manj-gnome!jacob@localhost JOIN #CHAN";
+    let mut channel_message = ":localhost 332 #CHAN: Hello, buddy boy :)";
+    let mut users = "manj-gnome!jacob@localhost";
+    let rpl_topic = 332;
     
-    // set num (the return value)
-    let num = response.len();
+    //let final_response = format!("{} {} {}", response, channel_message, users);
+    let final_response = ":localhost 001 manj-gnome :Yooooo!!!\n";
+    
+    //let final_response = final_response.as_bytes();
+    
 
+    
     // need to match the wrte() to see if the error connection is still
     // alive, not sure why we don't need to do it on the read (we probs should)
-    match stream.write(response.as_bytes()) {
+    match stream.write(final_response.as_bytes()) {
         Ok(_) => {
             stream.flush().unwrap();
-            return num;
+            return len;
         }
         // We should probably be checking what the error is and handling 
         // instead of assuming the connection is dead.
