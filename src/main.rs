@@ -13,6 +13,11 @@ mod irc;
 
 const ADDR: &str = "localhost:3030";
 
+// struct server {
+//     pub channels: HashMap::<String, irc::channel::Channel>,
+//     pub domain: &String,
+// }
+
 fn main() {
     // bind to address ADDR 
     let listener = match TcpListener::bind(ADDR) {
@@ -77,21 +82,32 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
     // search for first null character in array
     let len = buffer.iter().position(|&p| p == 0).unwrap();
     
-    println!("{}", String::from_utf8_lossy(&buffer[..]));
-
     // convert the input to uppercase
     // slice index only to the length of the string
-    let _response = String::from_utf8_lossy(&buffer[0..len]).to_uppercase();
-    
+    let client_in= String::from_utf8_lossy(&buffer[0..len]).to_uppercase();
+    let response: String;
+
     //let final_response = format!("{} {} {}", response, channel_message, users);
     let host = String::from("localhost");
     let username = String::from("manj-gnome");
     let message = String::from("Welcome to IRCrust");
-    let registration = irc::commandf::server_client(&host, irc::Response::RplWelcome, &username, &message);
+
+    // parse the client input text
+    println!("{}", client_in);
+    if client_in.contains("JOIN") {
+        //response = format!("manj-gnome!manj-gnome@localhost JOIN #CHANNEL\n:{} {:0>3} manj-gnome #CHANNEL : {}\n:{} {:0>3} manj-gnome = #CHANNEL :@manj-gnome \n:localhost {} manj-gnome #CHANNEL :End of NAMES list\n", 
+        response = format!("manj-gnome!manj-gnome@localhost JOIN #CHANNEL\n:{} {:0>3} manj-gnome #CHANNEL : {}\n:{} {:0>3} manj-gnome = #CHANNEL :@manj-gnome \n:localhost {} manj-gnome #CHANNEL :End of NAMES list\n", 
+                           host, irc::Response::RplTopic as u32, "Mooose", host, irc::Response::RplNamreply as u32, irc::Response::RplEndofnames as u32);
+    } else {
+        response = irc::commandf::server_client(&host, irc::Response::RplWelcome, &username, &message);
+    }
+
+    
+    println!("{}", response);
     
     // need to match the wrte() to see if the error connection is still
     // alive, not sure why we don't need to do it on the read (we probs should)
-    match stream.write(registration.as_bytes()) {
+    match stream.write(response.as_bytes()) {
         Ok(_) => {
             stream.flush().unwrap();
             return len;
