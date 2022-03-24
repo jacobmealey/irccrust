@@ -88,6 +88,16 @@ pub mod channel {
     }
 }
 
+pub mod commandf {
+    // registration -- generates the string to send when a new connection
+    // is made.
+    use crate::irc::Response;
+    pub fn server_client(host: &String, numeric: Response, username: &String, message: &String) -> String {
+        return format!(":{} {:0>3} {} :{}!!!\n", host, numeric as u32, username, message);
+    }
+
+}
+
 #[repr(u32)]
 // if the enum value isn't used and 
 #[allow(dead_code)]
@@ -177,12 +187,4 @@ pub enum Response {
     RplTryagain=263,
 }
 
-pub mod commandf {
-    // registration -- generates the string to send when a new connection
-    // is made.
-    use crate::irc::Response;
-    pub fn server_client(host: &String, numeric: Response, username: &String, message: &String) -> String {
-        return format!(":{} {:0>3} {} :{}!!!\n", host, numeric as u32, username, message);
-    }
-}
 
