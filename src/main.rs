@@ -85,18 +85,22 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
     // convert the input to uppercase
     // slice index only to the length of the string
     let client_in= String::from_utf8_lossy(&buffer[0..len]);
-    let response: String;
+    let mut response: String = String::from("");
 
     //let final_response = format!("{} {} {}", response, channel_message, users);
     let host = String::from("localhost");
     let username = String::from("jacob");
     let message = String::from("Welcome to IRCrust");
+    let channel = String::from("channel");
+    let users = String::from("jacob man");
 
     // parse the client input text
     println!("client in: {}", client_in);
     if client_in.contains("JOIN") {
-        response = format!(":jacob!jacob@localhost JOIN #channel\n:localhost 353 jacob = #channel :jacob \n:localhost 366 jacob #channel :End of NAMES list\n"); 
-        //response = format!("manj-gnome!jacob@localhost JOIN #CHANNEL\n:{} {:0>3} manj-gnome #CHANNEL : {}\n:{} {:0>3} manj-gnome = #CHANNEL :manj-gnome \n:localhost 366 manj-gnome #CHANNEL :End of NAMES list\n", 
+        response.push_str(":jacob!jacob@localhost JOIN #channel\n");
+        response.push_str(format!(":{} {} {} = #{} :{} \n", 
+                                  &localhost, irc::Response::RplUsersstart, &channel, &users));
+        response.push_str(":localhost 366 jacob #channel :End of NAMES list\n"); 
     } else if client_in.contains("CAP") { 
         // welcome message
         response = irc::commandf::server_client(&host, irc::Response::RplWelcome, &username, &message);

@@ -96,6 +96,14 @@ pub mod commandf {
         return format!(":{} {:0>3} {} :{}!!!\n", host, numeric as u32, username, message);
     }
 
+    pub fn client_join(user: &String, channel: &String, hostname: &String) -> String {
+        let resposne = String::from("");
+        response.push_str(format!(":{} JOIN #{}\n", user, channel));
+        response.push_str(format!(":{} {} {} = #{} :{} \n", 
+                                  &host, irc::Response::RplUsersstart, &channel, &users));
+        response.push_str(":localhost 366 jacob #channel :End of NAMES list\n"); 
+    }
+
 }
 
 #[repr(u32)]
