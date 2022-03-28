@@ -92,16 +92,12 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
     let username = String::from("jacob");
     let message = String::from("Welcome to IRCrust");
     let channel = String::from("channel");
-    let users = String::from("jacob man");
 
     // parse the client input text
     println!("client in: {}", client_in);
     if client_in.contains("JOIN") {
-        response.push_str(":jacob!jacob@localhost JOIN #channel\n");
-        response.push_str(format!(":{} {} {} = #{} :{} \n", 
-                                  &localhost, irc::Response::RplUsersstart, &channel, &users));
-        response.push_str(":localhost 366 jacob #channel :End of NAMES list\n"); 
-    } else if client_in.contains("CAP") { 
+        response = irc::commandf::client_join(&username, &channel, &host);
+   } else if client_in.contains("CAP") { 
         // welcome message
         response = irc::commandf::server_client(&host, irc::Response::RplWelcome, &username, &message);
     } else {
