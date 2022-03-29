@@ -89,9 +89,39 @@ pub mod channel {
 }
 
 pub mod commandf {
+    use crate::irc::Response;
+    
+    #[allow(dead_code)]
+    pub enum IRCMessageType {
+        JOIN,
+        PING,
+        PONG,
+        PASS,
+        NICK,
+        USER,
+        OPER,
+        MODE, // UH this both the channel mode and the user mode?
+        SERVICE,
+        QUIT,
+        SQUIT,
+        PART,
+        TOPIC,
+        NAMES,
+        LIST,
+        INVITE,
+        KICK,
+        PRIVMSG,
+        NOTICE,
+        UNKNOWN
+    }
+
+    pub struct IRCMessage {
+        pub msg_type: IRCMessageType,
+        pub component: Vec<String>
+    }
+
     // registration -- generates the string to send when a new connection
     // is made.
-    use crate::irc::Response;
     pub fn server_client(host: &String, numeric: Response, username: &String, message: &String) -> String {
         return format!(":{} {:0>3} {} :{}!!!\n", host, numeric as u32, username, message);
     }
@@ -103,6 +133,49 @@ pub mod commandf {
                                   hostname, Response::RplUsersstart as u32, user, channel, user)[..]);
         response.push_str(&format!(":{} 366 {} #{} :End of NAMES list\n", hostname, user, channel)[..]); 
         return response;
+    }
+
+    // Takes a message string and a handler callback function
+    pub fn message_decode(message: String) -> Vec<IRCMessage> {
+        let split_message: Vec<&str> = message.split('\n').collect();
+        let mut messages: Vec<IRCMessage> = Vec::new();
+
+        for x in split_message {
+            let sm: Vec<&str> = x.split_whitespace().collect();
+            if sm.len() == 0 {continue};
+
+            let message_type = match sm[0] {
+                "JOIN" => IRCMessageType::JOIN,
+                "PING" => IRCMessageType::PING,
+                "PONG" => IRCMessageType::PONG,
+                "PASS" => IRCMessageType::PASS,
+                "NICK" => IRCMessageType::NICK,
+                "USER" => IRCMessageType::USER,
+                "MODE" => IRCMessageType::MODE,
+                "SERVICE" => IRCMessageType::SERVICE,
+                "QUIT" => IRCMessageType::QUIT,
+                "SQUI" => IRCMessageType::SQUIT,
+                "PART" => IRCMessageType::PART,
+                "TOPIC" => IRCMessageType::TOPIC,
+                "NAMES" => IRCMessageType::NAMES,
+                "LIST" => IRCMessageType::LIST,
+                "INVITE" => IRCMessageType::INVITE,
+                "KICK" => IRCMessageType::KICK,
+                "PRIVMSG" => IRCMessageType::PRIVMSG,
+                "NOTICE" => IRCMessageType::NOTICE,
+                _ => IRCMessageType::UNKNOWN
+            };
+
+            let decoded_message = IRCMessage { 
+                msg_type: message_type,
+                component: sm[1..].iter().map(|&s| s.into()).collect(), // convert to vector of String
+            };
+
+            messages.push(decoded_message);
+        }
+        
+        return messages;
+
     }
 
 }

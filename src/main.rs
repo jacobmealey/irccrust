@@ -84,28 +84,37 @@ fn handle_connection(mut stream: &TcpStream) -> usize {
     
     // convert the input to uppercase
     // slice index only to the length of the string
-    let client_in= String::from_utf8_lossy(&buffer[0..len]);
-    let mut response: String = String::from("");
+    let client_in = String::from_utf8_lossy(&buffer[0..len]);
+    println!("client in: {}", client_in);
 
-    //let final_response = format!("{} {} {}", response, channel_message, users);
+    let mut response: String = String::from("");
+    let msgs = irc::commandf::message_decode(client_in.to_string());
+
     let host = String::from("localhost");
-    let username = String::from("jacob");
+    let mut username = String::from("");
     let message = String::from("Welcome to IRCrust");
-    let channel = String::from("channel");
+    let mut channel = String::from("channel");
 
     // parse the client input text
-    println!("client in: {}", client_in);
-    if client_in.contains("JOIN") {
-        response = irc::commandf::client_join(&username, &channel, &host);
-   } else if client_in.contains("CAP") { 
-        // welcome message
-        response = irc::commandf::server_client(&host, irc::Response::RplWelcome, &username, &message);
-    } else {
-        response = "".to_string();
+    for msg in msgs{
+        println!("User: {}", username);
+        match msg.msg_type {
+            irc::commandf::IRCMessageType::JOIN => {
+                channel = msg.component[0].clone();
+                response = irc::commandf::client_join(&username, &channel, &host);
+            }
+            irc::commandf::IRCMessageType::NICK => {
+                username = msg.component[0].clone();
+                response = irc::commandf::server_client(&host, irc::Response::RplWelcome, &username, &message)
+            }
+            _ => {
+            }
+        }
     }
-
     
-    println!("{}", response);
+    
+    
+    println!("Response: \n{}", response);
     
     // need to match the wrte() to see if the error connection is still
     // alive, not sure why we don't need to do it on the read (we probs should)
