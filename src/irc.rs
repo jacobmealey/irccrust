@@ -112,6 +112,7 @@ pub mod commandf {
         KICK,
         PRIVMSG,
         NOTICE,
+        KILL,
         UNKNOWN
     }
 
@@ -163,6 +164,7 @@ pub mod commandf {
                 "KICK" => IRCMessageType::KICK,
                 "PRIVMSG" => IRCMessageType::PRIVMSG,
                 "NOTICE" => IRCMessageType::NOTICE,
+                "KILL" => IRCMessageType::KILL,
                 _ => IRCMessageType::UNKNOWN
             };
 
