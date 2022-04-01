@@ -37,17 +37,6 @@ fn main() {
         Err(e) => {panic!("Error binding to TCP socket: {}", e);}
     };
 
-    let mut channel = irc::channel::Channel {
-        users: HashMap::<String, &irc::User>::new(),
-        priv_users: HashMap::<String, &irc::User>::new(),
-        flag: irc::channel::Flags::new(),
-        name: String::from("channel"),
-        topic: String::from(""),
-        key: String::from("passwd")
-    };
-
-    let user = irc::User {name: String::from("name")};
-    channel.add_user(&user);
 
     let server_lock = Arc::new(Mutex::new(Server::new(String::from("localhost")))); 
 
@@ -65,12 +54,13 @@ fn main() {
         threads.push(thread::spawn(move || {
             // we loop to ensure that stream stays in scope and 
             // is not dropped (thus killing the connection)
+            let mut user: irc::User = irc::User {name: String::from("")};
             loop {
                 let stream = match stream {
                     Ok(ref stream) => stream,
                     Err(_e) => {panic!("Error in stream :(");}
                 };
-                let num = handle_connection(&stream, &server_lock_clone);
+                let num = handle_connection(&stream, &server_lock_clone, &mut user);
                 println!("Wrote {} bytes", num);
                 // if zero, no bytes written connection is closed
                 // (do we know that for sure?)
@@ -95,7 +85,7 @@ fn main() {
 //
 // Ideally it should return a Result<> and have the err
 // handled properly
-fn handle_connection(mut stream: &TcpStream, lock: &Arc<Mutex<Server>>) -> usize {
+fn handle_connection(mut stream: &TcpStream, lock: &Arc<Mutex<Server>>, user: &mut irc::User) -> usize {
     // set buffer to size of 1024 and read from TcpStream 
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
@@ -126,11 +116,13 @@ fn handle_connection(mut stream: &TcpStream, lock: &Arc<Mutex<Server>>) -> usize
         match msg.msg_type {
             irc::commandf::IRCMessageType::JOIN => {
                 channel = msg.component[0].clone();
+
                 response = irc::commandf::client_join(&username, &channel, &host);
             }
             irc::commandf::IRCMessageType::NICK => {
-                username = msg.component[0].clone();
-                response = irc::commandf::server_client(&host, irc::Response::RplWelcome, &username, &message)
+                user.name = msg.component[0].clone();
+                println!("NICK messages");
+                response = irc::commandf::server_client(&host, irc::Response::RplWelcome, &user.name, &message)
             }
             irc::commandf::IRCMessageType::KILL => {
                 // kill thread? 
