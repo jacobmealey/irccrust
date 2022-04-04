@@ -72,6 +72,17 @@ pub mod channel {
         pub fn delete_user(&mut self, user: &'a User) {
             self.users.remove(&user.name);
         }
+        
+        pub fn new(name: &str) -> Channel {
+            Channel{
+                users: HashMap::new(),
+                priv_users: HashMap::new(),
+                flag: Flags::new(),
+                name: name.to_string(),
+                topic: "".to_string(),
+                key: "".to_string(),
+            }
+        }
 
         // get_users takes no arguments, returns iterator where
         // each element of the iterator is a tuple with the order

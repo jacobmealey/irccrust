@@ -92,7 +92,7 @@ fn handle_connection(mut stream: &TcpStream, lock: &Arc<Mutex<Server>>, user: &m
 
 
     //let server = Arc::clone(&lock);
-    let server = lock.lock().unwrap();
+    let mut server = lock.lock().unwrap();
 
     // search for first null character in array
     let len = buffer.iter().position(|&p| p == 0).unwrap();
@@ -109,6 +109,7 @@ fn handle_connection(mut stream: &TcpStream, lock: &Arc<Mutex<Server>>, user: &m
     let mut username = String::from("jacob");
     let message = String::from("Welcome to IRCrust");
     let mut channel = String::from("channel");
+    
 
     // parse the client input text
     for msg in msgs{
@@ -116,8 +117,8 @@ fn handle_connection(mut stream: &TcpStream, lock: &Arc<Mutex<Server>>, user: &m
         match msg.msg_type {
             irc::commandf::IRCMessageType::JOIN => {
                 channel = msg.component[0].clone();
-
-                response = irc::commandf::client_join(&username, &channel, &host);
+                let channel_obj = server.channels.entry(channel).or_insert(irc::channel::Channel::new("channel"));
+                response = irc::commandf::client_join(&user.name, &channel_obj.name, &host);
             }
             irc::commandf::IRCMessageType::NICK => {
                 user.name = msg.component[0].clone();
