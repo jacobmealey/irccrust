@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct User {
     pub name: String,
     //pub host: String,
@@ -12,6 +13,7 @@ pub mod channel {
     use crate::irc::User;
     use std::collections::HashMap;
     use std::collections::hash_map::IntoIter;
+    #[derive(Clone)]
     pub struct Channel <'a>{
         pub users: HashMap<String, &'a User>,
         pub priv_users: HashMap<String, &'a User>,
@@ -21,6 +23,7 @@ pub mod channel {
         pub key: String, // probs should be hashed but *shrug*
     }
     
+    #[derive(Clone)]
     pub struct Flags {
         pub anonymous: bool,
         pub invite_only: bool,
