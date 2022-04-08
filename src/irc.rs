@@ -159,6 +159,19 @@ pub mod commandf {
         return format!(":{} JOIN {}\n", &user, &channel).to_string()
     }
 
+    // PRIVMSG #channel :message
+    // We need to decode the above, so that the function returns a tuple (?) where
+    // the first element is the channel and the second is the message
+    pub fn privmsg_decode(encoded: &String) -> Result<(String, String), String> {
+        let split: Vec<&str> = encoded.split(" ").collect();
+        if(split.len() < 3){
+           return Err("Couldn't parse encoded message properly...".to_string());
+        }
+        // remove leading colon from message
+        return Ok((split[1].to_string(), split[2..].join(" ").to_string()));
+
+    }
+
     // Takes a message string and a handler callback function
     pub fn message_decode(message: String) -> Vec<IRCMessage> {
         let split_message: Vec<&str> = message.split('\n').collect();

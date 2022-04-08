@@ -105,6 +105,10 @@ async fn main() {
                                     }
                                     irc::commandf::IRCMessageType::PRIVMSG  => {
                                         response = line.clone();
+                                        let (channel_name, message) = irc::commandf::privmsg_decode(&response).unwrap();
+                                        // This is gauranteed because can't send message if not in
+                                        // channel?
+                                        response = format!(":{} PRIVMSG {} {}", user.name.clone(), channel_name.clone(), message.clone());
                                         println!("{}", line);
                                     }                            
                                     _ => {
@@ -147,7 +151,11 @@ async fn main() {
                                 } 
                             }
                             irc::commandf::IRCMessageType::PRIVMSG => {
-                                println!("{}", msg);
+                                println!("{}", msg.clone());
+
+                                if name != user.name.clone() {
+                                    writer.write_all(msg.as_bytes()).await.unwrap();
+                                }
                             }
                             _ => {}
                         }
@@ -159,49 +167,3 @@ async fn main() {
         
 }
 
-// Handle connection takes a TcpStream and returns the
-// amount of bytes written to the stream. It reads a 
-// 1024 bytes at a time from the TcpStream
-//
-// Ideally it should return a Result<> and have the err
-// handled properly
-// fn _handle_connection(mut stream: &TcpStream, tx: &Sender<Server>, lock: &Arc<Mutex<Server>>, user: &mut irc::User) -> usize {
-//     // set buffer to size of 1024 and read from TcpStream 
-//     let mut buffer = [0; 1024];
-//     stream.read(&mut buffer).unwrap();
-// 
-// 
-//     //let server = Arc::clone(&lock);
-//     let server = lock.lock().unwrap();
-// 
-//     // search for first null character in array
-//     let len = buffer.iter().position(|&p| p == 0).unwrap();
-// 
-//     // slice index only to the length of the string
-//     let client_in = String::from_utf8_lossy(&buffer[0..len]);
-//     println!("client in: {}", client_in);
-//     // decode client in 
-//     let msgs = irc::commandf::message_decode(client_in.to_string());
-//      
-//     let mut response: String = String::from("");
-// 
-//     
-//     println!("Response: \n{}", response);
-//     
-//     // need to match the wrte() to see if the error connection is still
-//     // alive, not sure why we don't need to do it on the read (we probs should)
-//     match stream.write(response.as_bytes()) {
-//         Ok(_) => {
-//             stream.flush().unwrap();
-//             return len;
-//         }
-//         // We should probably be checking what the error is and handling 
-//         // instead of assuming the connection is dead.
-//         Err(_e) => {
-//             println!("Connection Closed");
-//             return 0;
-//         }
-//     }
-//     
-// }
-// 
