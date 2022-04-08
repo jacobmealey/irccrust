@@ -5,28 +5,26 @@
 // I don't like being happy?
 
 use std::io::prelude::*;
-use std::thread;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc;
-use std::sync::mpsc::{Sender, Receiver};
+use std::net::SocketAddr;
 use tokio::{io::{AsyncWriteExt, BufReader, AsyncBufReadExt}, net::TcpListener, sync::broadcast};
 mod irc;
 
 const ADDR: &str = "localhost:3030";
 
 #[derive(Clone)]
-struct Server<'a> {
-    pub channels: Box<HashMap::<String, irc::channel::Channel<'a>>>,
-    pub users: Box<HashMap::<String, irc::User>>,
+struct Server {
+    pub channels: Box<HashMap::<String, irc::channel::Channel>>,
+    pub users: Box<HashMap::<String, SocketAddr>>,
     pub domain: String,
 }
 
-impl Server<'_> {
-    pub fn new<'a>(host: String) -> Server<'a> {
+impl Server {
+    pub fn new(host: String) -> Server {
         return Server {
-            channels: Box::new(HashMap::<String, irc::channel::Channel<'a>>::new()),
-            users: Box::new(HashMap::<String, irc::User>::new()),
+            channels: Box::new(HashMap::<String, irc::channel::Channel>::new()),
+            users: Box::new(HashMap::<String, SocketAddr>::new()),
             domain: host,
         }
     }
@@ -42,36 +40,94 @@ async fn main() {
 
 
     let server_lock = Arc::new(Mutex::new(Server::new(String::from("localhost")))); 
-
     
     let (tx, _rx) = broadcast::channel(10);
 
-    // currently we are only listening to a single connection at 
-    // a time, we /should/ open a new thread everytime we get a 
-    // connection
+    // This loops creates a new thread and keeps them alive as long as their is a 
+    // connection everytime a new connection is made it spawns a new thread
     loop {
+        // get socket and adress from the listener
         let (mut socket, addr) = listener.accept().await.unwrap();
-        let mut line = String::new();
-        
+
+        // create clones of channels 
         let tx = tx.clone();
         let mut rx = tx.subscribe();
-        
+
+        let mut line = String::new();
+
+        let server = Arc::clone(&server_lock);
         tokio::spawn(async move {
             let (reader, mut writer) = socket.split();
             let mut reader = BufReader::new(reader);
+            let mut user: irc::User = irc::User{name: "".to_string()};
             loop {
                 tokio::select! {
+
                     result = reader.read_line(&mut line) => {
-                        if result.unwrap() == 0 {
-                            break;
+                        let mut msg_type: irc::commandf::IRCMessageType = irc::commandf::IRCMessageType::UNKNOWN;
+                        let mut response = String::from("");
+                        let messages = irc::commandf::message_decode(line.clone());
+
+                        {
+                            let mut server = server.lock().unwrap();
+                            if result.unwrap() == 0 {
+                                break;
+                            }
+
+
+                            for msg in messages {
+                                msg_type = msg.msg_type;
+                                match msg_type {
+                                    irc::commandf::IRCMessageType::NICK => {
+                                        user.name= msg.component[0].clone();
+                                        response = irc::commandf::server_client(&server.domain, irc::Response::RplWelcome, &user.name, &"Goodday!".to_string());
+                                    }
+                                    irc::commandf::IRCMessageType::JOIN => {
+                                        let channel = server.channels.entry(msg.component[0].clone()).or_insert(irc::channel::Channel::new("channel"));
+                                        channel.users.insert(user.name.clone(), addr);
+                                        response = irc::commandf::client_join(&user.name, &msg.component[0], &server.domain.clone());
+                                    }
+                                    irc::commandf::IRCMessageType::PRIVMSG  => {
+                                        response = line.clone();
+                                        println!("{}", line);
+                                    }                            
+                                    _ => {
+                                        response = "".to_string();
+                                        println!("{}", line);
+                                    }
+                                }
+                            }
                         }
 
-                        tx.send((line.clone(), addr)).unwrap();
+                        tx.send((msg_type, response.clone(), addr)).unwrap();
                     } result = rx.recv() => {
-                        let (msg, other_addr) = result.unwrap();
-                        if addr != other_addr {
-                            writer.write_all(msg.as_bytes()).await.unwrap();
-                        } 
+                        // this part should NEVER mutate the server -- this is for updating 
+                        // updating all clients with current state of this biddy
+                        let server_ : Server; 
+                        {
+                            server_ = server.lock().unwrap().clone();
+                        }
+                        let (mtype, msg, other_addr) = result.unwrap();
+                        let messages = irc::commandf::message_decode(msg.clone());
+                        match mtype {
+                            irc::commandf::IRCMessageType::NICK => {
+                                if addr == other_addr {
+                                    writer.write_all(&msg.as_bytes()).await.unwrap();
+                                } 
+                            }
+                            irc::commandf::IRCMessageType::JOIN => {
+                                let message = &messages[0];
+                                let channel = &message.component[1];
+                                println!("{}", channel);
+                                if addr == other_addr {
+                                    writer.write_all(&msg.as_bytes()).await.unwrap();
+                                } 
+                            }
+                            irc::commandf::IRCMessageType::PRIVMSG => {
+                                println!("{}", msg);
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }

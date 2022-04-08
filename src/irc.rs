@@ -13,10 +13,11 @@ pub mod channel {
     use crate::irc::User;
     use std::collections::HashMap;
     use std::collections::hash_map::IntoIter;
+    use std::net::SocketAddr;
     #[derive(Clone)]
-    pub struct Channel <'a>{
-        pub users: HashMap<String, &'a User>,
-        pub priv_users: HashMap<String, &'a User>,
+    pub struct Channel {
+        pub users: HashMap<String, SocketAddr>,
+        pub priv_users: HashMap<String, SocketAddr>,
         pub flag: Flags,
         pub name: String,
         pub topic: String,
@@ -63,17 +64,17 @@ pub mod channel {
     }
 
     // Channel methods 
-    impl<'a> Channel<'a> {
+    impl Channel {
         // add a user to this channel
-        pub fn add_user(&mut self, user: &'a User) {
+        pub fn add_user(&mut self, user: String, userAddr: SocketAddr) {
             // only add the user if they aren't in the list
-            if self.users.get(&user.name).is_none() {
-                self.users.insert(user.name.clone(), user);
+            if self.users.get(&user).is_none() {
+                self.users.insert(user.clone(), userAddr);
             }
         }
 
-        pub fn delete_user(&mut self, user: &'a User) {
-            self.users.remove(&user.name);
+        pub fn delete_user(&mut self, user: &String) {
+            self.users.remove(user);
         }
         
         pub fn new(name: &str) -> Channel {
@@ -90,7 +91,7 @@ pub mod channel {
         // get_users takes no arguments, returns iterator where
         // each element of the iterator is a tuple with the order
         // (username, user_instance)
-        pub fn get_users(&mut self) -> IntoIter<String, &'a User> {
+        pub fn get_users(&mut self) -> IntoIter<String, SocketAddr> {
             // create a clone of the users map, convert to iterator
             return self.users.clone().into_iter();
         }
@@ -106,6 +107,8 @@ pub mod commandf {
     use crate::irc::Response;
     
     #[allow(dead_code)]
+    #[derive(Clone)]
+    #[derive(Debug)]
     pub enum IRCMessageType {
         JOIN,
         PING,
@@ -130,6 +133,7 @@ pub mod commandf {
         UNKNOWN
     }
 
+    #[derive(Clone)]
     pub struct IRCMessage {
         pub msg_type: IRCMessageType,
         pub component: Vec<String>
