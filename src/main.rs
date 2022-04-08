@@ -58,6 +58,7 @@ async fn main() {
         let tx = tx.clone();
         let mut rx = tx.subscribe();
 
+        // data being read from socket will be written into this.
         let mut line = String::new();
 
         let server = Arc::clone(&server_lock);
@@ -68,12 +69,16 @@ async fn main() {
             loop {
                 tokio::select! {
 
+                    // This first select is for incoming data from the clients, it ingests it and
+                    // makes modifications to the state of the server
                     result = reader.read_line(&mut line) => {
                         let mut msg_type: irc::commandf::IRCMessageType = irc::commandf::IRCMessageType::UNKNOWN;
                         let mut response = String::from("");
                         let messages = irc::commandf::message_decode(line.clone());
 
-                        {
+                        // Entering the locked section of the thread, this is where the server
+                        // state will be mutated and worked on.
+                        { 
                             let mut server = server.lock().unwrap();
                             if result.unwrap() == 0 {
                                 break;
@@ -81,9 +86,13 @@ async fn main() {
                             
                             println!("{}", line.clone());
 
+                            // loop through the messages and decode them, update state accordingly
+                            // pass the decoded messages to the transmit section
                             for msg in messages {
                                 msg_type = msg.msg_type;
                                 match msg_type {
+                                    // this section should only match the message types that
+                                    // directly modify the state? maybe? idk, just food for though.
                                     irc::commandf::IRCMessageType::NICK => {
                                         user.name= msg.component[0].clone();
                                         response = irc::commandf::server_client(&server.domain, irc::Response::RplWelcome, &user.name, &"Goodday!".to_string());
@@ -121,6 +130,9 @@ async fn main() {
                         // release server lock
 
                         tx.send((msg_type, response.clone(), user.name.clone())).unwrap();
+                    // this select is for outgoing messages from the server to the clients, this
+                    // only holds the lock for a brief time to make a copy of the server state,
+                    // this is then used for outgoing messages to the clients.
                     } result = rx.recv() => {
                         // this part should NEVER mutate the server -- this is for updating 
                         // updating all clients with current state of this biddy
@@ -137,26 +149,32 @@ async fn main() {
                                 } 
                             }
                             irc::commandf::IRCMessageType::JOIN => {
+                                // get the channel name from the message
                                 let message = &messages[0];
                                 let channel = &message.component.last().unwrap();
                                 
                                 println!("{} Attempting to join: {}", user.name.clone(), channel.clone());
                                 let mut channel = server_.channels.get(channel.clone()).unwrap().clone();
+                                // We need to do different things if we are, or are not the user
+                                // sending the message, if we are the user sending the message we
+                                // need to send back more data to show who's in the server and what
+                                // not. if we aren't the user sending we just need to forward the
+                                // message.
                                 if name == user.name.clone() {
                                     writer.write_all(&msg.as_bytes()).await.unwrap();
-                                }
-                                if channel.get_users().contains(&user.name) {
+                                } else if channel.get_users().contains(&user.name) {
                                     let response = irc::commandf::join_announce(&name.clone(), &channel.name.clone(), &server_.domain.clone());
                                     writer.write_all(&response.as_bytes()).await.unwrap();
                                 } 
                             }
                             irc::commandf::IRCMessageType::PRIVMSG => {
                                 println!("{}", msg.clone());
-
+                                // We probbably /shouldn't/ be sending to all but whatevs. FIXME
                                 if name != user.name.clone() {
                                     writer.write_all(msg.as_bytes()).await.unwrap();
                                 }
                             }
+                            // if we haven't implemented it do nothing :)
                             _ => {}
                         }
                     }
