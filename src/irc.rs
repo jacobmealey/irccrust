@@ -14,10 +14,11 @@ pub mod channel {
     use std::collections::HashMap;
     use std::collections::hash_map::IntoIter;
     use std::net::SocketAddr;
+    use std::slice::Iter;
     #[derive(Clone)]
     pub struct Channel {
-        pub users: HashMap<String, SocketAddr>,
-        pub priv_users: HashMap<String, SocketAddr>,
+        pub users: Vec<String>,
+        pub priv_users: Vec<String>,
         pub flag: Flags,
         pub name: String,
         pub topic: String,
@@ -66,21 +67,21 @@ pub mod channel {
     // Channel methods 
     impl Channel {
         // add a user to this channel
-        pub fn add_user(&mut self, user: String, userAddr: SocketAddr) {
+        pub fn add_user(&mut self, user: String) {
             // only add the user if they aren't in the list
-            if self.users.get(&user).is_none() {
-                self.users.insert(user.clone(), userAddr);
+            if !self.users.contains(&user) {
+                self.users.push(user.clone());
             }
         }
 
         pub fn delete_user(&mut self, user: &String) {
-            self.users.remove(user);
+            self.users.remove(self.users.iter().position(|s| s == user).unwrap());
         }
         
         pub fn new(name: &str) -> Channel {
             Channel{
-                users: HashMap::new(),
-                priv_users: HashMap::new(),
+                users: Vec::new(),
+                priv_users: Vec::new(),
                 flag: Flags::new(),
                 name: name.to_string(),
                 topic: "".to_string(),
@@ -88,12 +89,12 @@ pub mod channel {
             }
         }
 
-        // get_users takes no arguments, returns iterator where
-        // each element of the iterator is a tuple with the order
-        // (username, user_instance)
-        pub fn get_users(&mut self) -> IntoIter<String, SocketAddr> {
+        // // get_users takes no arguments, returns iterator where
+        // // each element of the iterator is a tuple with the order
+        // // (username, user_instance)
+        pub fn get_users(&mut self) -> Vec<String> {
             // create a clone of the users map, convert to iterator
-            return self.users.clone().into_iter();
+            return self.users.clone();
         }
 
         pub fn set_topic(&mut self, topic: String) {
@@ -147,11 +148,15 @@ pub mod commandf {
 
     pub fn client_join(user: &String, channel: &String, hostname: &String) -> String {
         let mut response = String::from("");
-        response.push_str(&format!(":{} JOIN #{}\n", &user, &channel)[..]);
-        response.push_str(&format!(":{} {:0>3} {} = #{} :{} \n", 
+        response.push_str(&format!(":{} JOIN {}\n", &user, &channel)[..]);
+        response.push_str(&format!(":{} {:0>3} {} = {} :{} \n", 
                                   hostname, Response::RplUsersstart as u32, user, channel, user)[..]);
         response.push_str(&format!(":{} 366 {} #{} :End of NAMES list\n", hostname, user, channel)[..]); 
         return response;
+    }
+
+    pub fn join_announce(user: &String, channel: &String, hostname: &String) -> String {
+        return format!(":{} JOIN {}\n", &user, &channel).to_string()
     }
 
     // Takes a message string and a handler callback function

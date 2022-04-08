@@ -28,6 +28,11 @@ impl Server {
             domain: host,
         }
     }
+    
+    pub fn add_channel(&mut self, name: String) {
+        println!("Attempting to create channel: {}", name.clone());
+        self.channels.insert(name.clone(), irc::channel::Channel::new(&name));
+    }
 }
 
 #[tokio::main]
@@ -73,7 +78,8 @@ async fn main() {
                             if result.unwrap() == 0 {
                                 break;
                             }
-
+                            
+                            println!("{}", line.clone());
 
                             for msg in messages {
                                 msg_type = msg.msg_type;
@@ -83,9 +89,19 @@ async fn main() {
                                         response = irc::commandf::server_client(&server.domain, irc::Response::RplWelcome, &user.name, &"Goodday!".to_string());
                                     }
                                     irc::commandf::IRCMessageType::JOIN => {
-                                        let channel = server.channels.entry(msg.component[0].clone()).or_insert(irc::channel::Channel::new("channel"));
-                                        channel.users.insert(user.name.clone(), addr);
-                                        response = irc::commandf::client_join(&user.name, &msg.component[0], &server.domain.clone());
+                                        let mut channel = match server.channels.get_mut(&msg.component[0].clone()) {
+                                            Some(channel) => channel,
+                                            None => {
+                                                // add the channel
+                                                server.add_channel(msg.component[0].clone());
+                                                // we can be sure we added it now?
+                                                server.channels.get_mut(&msg.component[0].clone()).unwrap()
+                                            }
+
+                                        };
+                                        channel.add_user(user.name.clone());
+                                        let names = channel.get_users().join(" ");
+                                        response = irc::commandf::client_join(&names, &msg.component[0], &server.domain.clone());
                                     }
                                     irc::commandf::IRCMessageType::PRIVMSG  => {
                                         response = line.clone();
@@ -97,9 +113,10 @@ async fn main() {
                                     }
                                 }
                             }
-                        }
+                        } 
+                        // release server lock
 
-                        tx.send((msg_type, response.clone(), addr)).unwrap();
+                        tx.send((msg_type, response.clone(), user.name.clone())).unwrap();
                     } result = rx.recv() => {
                         // this part should NEVER mutate the server -- this is for updating 
                         // updating all clients with current state of this biddy
@@ -107,20 +124,26 @@ async fn main() {
                         {
                             server_ = server.lock().unwrap().clone();
                         }
-                        let (mtype, msg, other_addr) = result.unwrap();
+                        let (mtype, msg, name) = result.unwrap();
                         let messages = irc::commandf::message_decode(msg.clone());
                         match mtype {
                             irc::commandf::IRCMessageType::NICK => {
-                                if addr == other_addr {
+                                if name == user.name.clone() {
                                     writer.write_all(&msg.as_bytes()).await.unwrap();
                                 } 
                             }
                             irc::commandf::IRCMessageType::JOIN => {
                                 let message = &messages[0];
-                                let channel = &message.component[1];
-                                println!("{}", channel);
-                                if addr == other_addr {
+                                let channel = &message.component.last().unwrap();
+                                
+                                println!("{} Attempting to join: {}", user.name.clone(), channel.clone());
+                                let mut channel = server_.channels.get(channel.clone()).unwrap().clone();
+                                if name == user.name.clone() {
                                     writer.write_all(&msg.as_bytes()).await.unwrap();
+                                }
+                                if channel.get_users().contains(&user.name) {
+                                    let response = irc::commandf::join_announce(&name.clone(), &channel.name.clone(), &server_.domain.clone());
+                                    writer.write_all(&response.as_bytes()).await.unwrap();
                                 } 
                             }
                             irc::commandf::IRCMessageType::PRIVMSG => {
