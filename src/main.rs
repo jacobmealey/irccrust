@@ -161,7 +161,8 @@ async fn main() {
                                 // not. if we aren't the user sending we just need to forward the
                                 // message.
                                 if name == user.name.clone() {
-                                    writer.write_all(&msg.as_bytes()).await.unwrap();
+                                    let response = irc::commandf::client_join(&name.clone(), &channel.name.clone(), &server_.domain.clone());
+                                    writer.write_all(&response.as_bytes()).await.unwrap();
                                 } else if channel.get_users().contains(&user.name) {
                                     let response = irc::commandf::join_announce(&name.clone(), &channel.name.clone(), &server_.domain.clone());
                                     writer.write_all(&response.as_bytes()).await.unwrap();

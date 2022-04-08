@@ -151,7 +151,7 @@ pub mod commandf {
         response.push_str(&format!(":{} JOIN {}\n", &user, &channel)[..]);
         response.push_str(&format!(":{} {:0>3} {} = {} :{} \n", 
                                   hostname, Response::RplUsersstart as u32, user, channel, user)[..]);
-        response.push_str(&format!(":{} 366 {} #{} :End of NAMES list\n", hostname, user, channel)[..]); 
+        response.push_str(&format!(":{} 366 {} {} :End of NAMES list\n", hostname, user, channel)[..]); 
         return response;
     }
 
