@@ -14,4 +14,4 @@ end of April 2022, so here we are. Also, I've never written a 'large' networked 
 exploration of three topics:
   1. Writing network-y code (it's for a networking class)
   2. Exploring Rust, which is painful but the bird app says to learn it and I have no spine. 
-  3. Multi-threading - most of my courses thus far have barely touched on threading and writing threaded programs so here are. 
+  3. Multi-threading - most of my courses thus far have barely touched on threading and writing threaded programs... so here we are. 
