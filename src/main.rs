@@ -93,13 +93,15 @@ async fn main() {
                                     // directly modify the state? maybe? idk, just food for though.
                                     irc::commandf::IRCMessageType::USER => {
                                         println!("{}", &line);
-                                        user.realname= msg.component[0].clone();
-                                        if server.users.contains_key(&user.realname.clone()) {
+                                        let realname= msg.component[0].clone();
+                                        if server.users.contains_key(&realname.clone()) {
                                             println!("USER already exists!");
                                             response = irc::commandf::server_client(&server.domain,
                                                         irc::Response::RplErrAlreadyReg, &"".to_string(), 
-                                                        &"Unauthorized command (already registered)".to_string());
+                                                        &"User already registered".to_string());
                                         } else {
+                                            user.realname = realname.clone();
+                                            server.users.insert(user.realname.clone(), user.clone());
                                             response = irc::commandf::server_client(&server.domain, 
                                                 irc::Response::RplWelcome, &user.nickname, 
                                                 &"Weclome to IRCrust!".to_string());
