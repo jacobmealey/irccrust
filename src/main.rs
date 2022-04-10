@@ -16,7 +16,7 @@ const ADDR: &str = "localhost:3030";
 #[derive(Clone)]
 struct Server {
     pub channels: Box<HashMap::<String, irc::channel::Channel>>,
-    pub users: Box<HashMap::<String, SocketAddr>>,
+    pub users: Box<HashMap::<String, irc::User>>,
     pub domain: String,
 }
 
@@ -24,7 +24,7 @@ impl Server {
     pub fn new(host: String) -> Server {
         return Server {
             channels: Box::new(HashMap::<String, irc::channel::Channel>::new()),
-            users: Box::new(HashMap::<String, SocketAddr>::new()),
+            users: Box::new(HashMap::<String, irc::User>::new()),
             domain: host,
         }
     }
@@ -65,7 +65,7 @@ async fn main() {
         tokio::spawn(async move {
             let (reader, mut writer) = socket.split();
             let mut reader = BufReader::new(reader);
-            let mut user: irc::User = irc::User{name: "".to_string()};
+            let mut user: irc::User = irc::User::new();
             loop {
                 tokio::select! {
 
@@ -93,9 +93,21 @@ async fn main() {
                                 match msg_type {
                                     // this section should only match the message types that
                                     // directly modify the state? maybe? idk, just food for though.
+                                    irc::commandf::IRCMessageType::USER => {
+                                        println!("{}", &line);
+                                        user.realname= msg.component[0].clone();
+                                        if server.users.contains_key(&user.realname.clone()) {
+                                            println!("USER already exists!");
+                                            response = irc::commandf::server_client(&server.domain,
+                                                        irc::Response::RplErrAlreadyReg, &"".to_string(), 
+                                                        &"Unauthorized command (already registered)".to_string());
+                                        }                                         
+                                        response = irc::commandf::server_client(&server.domain, 
+                                            irc::Response::RplWelcome, &user.nickname, 
+                                            &"Weclome to IRCrust!".to_string());
+                                    }
                                     irc::commandf::IRCMessageType::NICK => {
-                                        user.name= msg.component[0].clone();
-                                        response = irc::commandf::server_client(&server.domain, irc::Response::RplWelcome, &user.name, &"Goodday!".to_string());
+                                        user.nickname = msg.component[0].clone();
                                     }
                                     irc::commandf::IRCMessageType::JOIN => {
                                         let mut channel = match server.channels.get_mut(&msg.component[0].clone()) {
@@ -108,7 +120,7 @@ async fn main() {
                                             }
 
                                         };
-                                        channel.add_user(user.name.clone());
+                                        channel.add_user(user.nickname.clone());
                                         let names = channel.get_users().join(" ");
                                         response = irc::commandf::client_join(&names, &msg.component[0], &server.domain.clone());
                                     }
@@ -117,7 +129,7 @@ async fn main() {
                                         let (channel_name, message) = irc::commandf::privmsg_decode(&response).unwrap();
                                         // This is gauranteed because can't send message if not in
                                         // channel?
-                                        response = format!(":{} PRIVMSG {} {}", user.name.clone(), channel_name.clone(), message.clone());
+                                        response = format!(":{} PRIVMSG {} {}", user.nickname.clone(), channel_name.clone(), message.clone());
                                         println!("{}", line);
                                     }                            
                                     _ => {
@@ -129,7 +141,7 @@ async fn main() {
                         } 
                         // release server lock
 
-                        tx.send((msg_type, response.clone(), user.name.clone())).unwrap();
+                        tx.send((msg_type, response.clone(), user.realname.clone())).unwrap();
                     // this select is for outgoing messages from the server to the clients, this
                     // only holds the lock for a brief time to make a copy of the server state,
                     // this is then used for outgoing messages to the clients.
@@ -143,8 +155,13 @@ async fn main() {
                         let (mtype, msg, name) = result.unwrap();
                         let messages = irc::commandf::message_decode(msg.clone());
                         match mtype {
+                            irc::commandf::IRCMessageType::USER => {
+                                if name == user.realname.clone() {
+                                    writer.write_all(&msg.as_bytes()).await.unwrap();
+                                } 
+                            }
                             irc::commandf::IRCMessageType::NICK => {
-                                if name == user.name.clone() {
+                                if name == user.realname.clone() {
                                     writer.write_all(&msg.as_bytes()).await.unwrap();
                                 } 
                             }
@@ -153,25 +170,25 @@ async fn main() {
                                 let message = &messages[0];
                                 let channel = &message.component.last().unwrap();
                                 
-                                println!("{} Attempting to join: {}", user.name.clone(), channel.clone());
+                                println!("{} Attempting to join: {}", user.nickname.clone(), channel.clone());
                                 let mut channel = server_.channels.get(channel.clone()).unwrap().clone();
                                 // We need to do different things if we are, or are not the user
                                 // sending the message, if we are the user sending the message we
                                 // need to send back more data to show who's in the server and what
                                 // not. if we aren't the user sending we just need to forward the
                                 // message.
-                                if name == user.name.clone() {
-                                    let response = irc::commandf::client_join(&name.clone(), &channel.name.clone(), &server_.domain.clone());
+                                if name == user.realname.clone() {
+                                    let response = irc::commandf::client_join(&user.nickname.clone(), &channel.name.clone(), &server_.domain.clone());
                                     writer.write_all(&response.as_bytes()).await.unwrap();
-                                } else if channel.get_users().contains(&user.name) {
-                                    let response = irc::commandf::join_announce(&name.clone(), &channel.name.clone(), &server_.domain.clone());
+                                } else if channel.get_users().contains(&user.nickname) {
+                                    let response = irc::commandf::join_announce(&user.nickname.clone(), &channel.name.clone(), &server_.domain.clone());
                                     writer.write_all(&response.as_bytes()).await.unwrap();
                                 } 
                             }
                             irc::commandf::IRCMessageType::PRIVMSG => {
                                 println!("{}", msg.clone());
                                 // We probbably /shouldn't/ be sending to all but whatevs. FIXME
-                                if name != user.name.clone() {
+                                if name != user.realname.clone() {
                                     writer.write_all(msg.as_bytes()).await.unwrap();
                                 }
                             }

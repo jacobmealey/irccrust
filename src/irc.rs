@@ -1,10 +1,20 @@
 #[derive(Clone)]
 pub struct User {
-    pub name: String,
-    //pub host: String,
+    pub nickname: String,
+    pub realname: String,
+    //pub host: String, // should be Addr lol
     //pub localname: String,
     //pub server: String,
     //pub user: bool, // Defines between user and service
+}
+
+impl User {
+    pub fn new() -> User {
+        return User{
+            nickname: "".to_string(),
+            realname: "".to_string()
+        }
+    }
 }
 
 
@@ -110,6 +120,7 @@ pub mod commandf {
     #[allow(dead_code)]
     #[derive(Clone)]
     #[derive(Debug)]
+    #[derive(PartialEq)]
     pub enum IRCMessageType {
         JOIN,
         PING,
@@ -305,6 +316,7 @@ pub enum Response {
     RplAdminloc2=258,
     RplAdminemail=259,
     RplTryagain=263,
+    RplErrAlreadyReg=462
 }
 
 
