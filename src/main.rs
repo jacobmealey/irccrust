@@ -108,8 +108,6 @@ async fn main() {
                                         user.nickname = msg.component[0].clone();
                                     }
                                     irc::commandf::IRCMessageType::JOIN => {
-                                        println!("BEGINNING JOIN SEQUENCE");
-                                        println!("incoming: {}", line.clone());
                                         let channel = match server.channels.get_mut(&msg.component[0].clone()) {
                                             Some(channel) => channel,
                                             None => {
@@ -184,10 +182,8 @@ async fn main() {
                                     writer.write_all(&response.as_bytes()).await.unwrap();
                                 } else if channel.get_users().contains(&user.nickname) {
                                     let response = irc::commandf::join_announce(&name, &channel.name.clone(), &server_.domain.clone());
-                                    println!("{} UHHH THE THING IS THE THING {}", &user.nickname, &response);
                                     writer.write_all(&response.as_bytes()).await.unwrap();
                                 } 
-                                println!("ENDING JOIN SEQUENCE");
                             }
                             irc::commandf::IRCMessageType::PRIVMSG => {
                                 println!("{}", msg.clone());
