@@ -4,10 +4,8 @@
 // a "simple" IRC server written in rust because
 // I don't like being happy?
 
-use std::io::prelude::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::net::SocketAddr;
 use tokio::{io::{AsyncWriteExt, BufReader, AsyncBufReadExt}, net::TcpListener, sync::broadcast};
 mod irc;
 
@@ -52,7 +50,7 @@ async fn main() {
     // connection everytime a new connection is made it spawns a new thread
     loop {
         // get socket and adress from the listener
-        let (mut socket, addr) = listener.accept().await.unwrap();
+        let (mut socket, _) = listener.accept().await.unwrap();
 
         // create clones of channels 
         let tx = tx.clone();
@@ -101,16 +99,17 @@ async fn main() {
                                             response = irc::commandf::server_client(&server.domain,
                                                         irc::Response::RplErrAlreadyReg, &"".to_string(), 
                                                         &"Unauthorized command (already registered)".to_string());
-                                        }                                         
-                                        response = irc::commandf::server_client(&server.domain, 
-                                            irc::Response::RplWelcome, &user.nickname, 
-                                            &"Weclome to IRCrust!".to_string());
+                                        } else {
+                                            response = irc::commandf::server_client(&server.domain, 
+                                                irc::Response::RplWelcome, &user.nickname, 
+                                                &"Weclome to IRCrust!".to_string());
+                                        }
                                     }
                                     irc::commandf::IRCMessageType::NICK => {
                                         user.nickname = msg.component[0].clone();
                                     }
                                     irc::commandf::IRCMessageType::JOIN => {
-                                        let mut channel = match server.channels.get_mut(&msg.component[0].clone()) {
+                                        let channel = match server.channels.get_mut(&msg.component[0].clone()) {
                                             Some(channel) => channel,
                                             None => {
                                                 // add the channel

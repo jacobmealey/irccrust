@@ -20,11 +20,6 @@ impl User {
 
 // Channel struct as defined by RFC 2811
 pub mod channel {
-    use crate::irc::User;
-    use std::collections::HashMap;
-    use std::collections::hash_map::IntoIter;
-    use std::net::SocketAddr;
-    use std::slice::Iter;
     #[derive(Clone)]
     pub struct Channel {
         pub users: Vec<String>,
@@ -75,6 +70,7 @@ pub mod channel {
     }
 
     // Channel methods 
+    #[allow(dead_code)] // don't warn if not using function
     impl Channel {
         // add a user to this channel
         pub fn add_user(&mut self, user: String) {
@@ -113,6 +109,7 @@ pub mod channel {
 
     }
 }
+
 
 pub mod commandf {
     use crate::irc::Response;
@@ -166,7 +163,7 @@ pub mod commandf {
         return response;
     }
 
-    pub fn join_announce(user: &String, channel: &String, hostname: &String) -> String {
+    pub fn join_announce(user: &String, channel: &String, _hostname: &String) -> String {
         return format!(":{} JOIN {}\n", &user, &channel).to_string()
     }
 
@@ -175,7 +172,7 @@ pub mod commandf {
     // the first element is the channel and the second is the message
     pub fn privmsg_decode(encoded: &String) -> Result<(String, String), String> {
         let split: Vec<&str> = encoded.split(" ").collect();
-        if(split.len() < 3){
+        if split.len() < 3 {
            return Err("Couldn't parse encoded message properly...".to_string());
         }
         // remove leading colon from message
