@@ -82,8 +82,6 @@ async fn main() {
                                 break;
                             }
                             
-                            println!("{}", line.clone());
-
                             // loop through the messages and decode them, update state accordingly
                             // pass the decoded messages to the transmit section
                             for msg in messages {
@@ -92,7 +90,6 @@ async fn main() {
                                     // this section should only match the message types that
                                     // directly modify the state? maybe? idk, just food for though.
                                     irc::commandf::IRCMessageType::USER => {
-                                        println!("{}", &line);
                                         let realname= msg.component[0].clone();
                                         if server.users.contains_key(&realname.clone()) {
                                             println!("USER already exists!");
@@ -111,6 +108,8 @@ async fn main() {
                                         user.nickname = msg.component[0].clone();
                                     }
                                     irc::commandf::IRCMessageType::JOIN => {
+                                        println!("BEGINNING JOIN SEQUENCE");
+                                        println!("incoming: {}", line.clone());
                                         let channel = match server.channels.get_mut(&msg.component[0].clone()) {
                                             Some(channel) => channel,
                                             None => {
@@ -123,7 +122,7 @@ async fn main() {
                                         };
                                         channel.add_user(user.nickname.clone());
                                         let names = channel.get_users().join(" ");
-                                        response = irc::commandf::client_join(&names, &msg.component[0], &server.domain.clone());
+                                        response = irc::commandf::client_join(&user.nickname, &names, &msg.component[0], &server.domain.clone());
                                     }
                                     irc::commandf::IRCMessageType::PRIVMSG  => {
                                         response = line.clone();
@@ -134,13 +133,14 @@ async fn main() {
                                         println!("{}", line);
                                     }                            
                                     _ => {
-                                        response = "".to_string();
-                                        println!("{}", line);
+                                        //response = "".to_string();
+                                        //println!("{}", line);
                                     }
                                 }
                             }
                         } 
                         // release server lock
+                        println!("Response:{}", response);
 
                         tx.send((msg_type, response.clone(), user.realname.clone())).unwrap();
                     // this select is for outgoing messages from the server to the clients, this
@@ -179,12 +179,15 @@ async fn main() {
                                 // not. if we aren't the user sending we just need to forward the
                                 // message.
                                 if name == user.realname.clone() {
-                                    let response = irc::commandf::client_join(&user.nickname.clone(), &channel.name.clone(), &server_.domain.clone());
+                                    let names = channel.get_users().join(" ");
+                                    let response = irc::commandf::client_join(&user.nickname, &names, &channel.name.clone(), &server_.domain.clone());
                                     writer.write_all(&response.as_bytes()).await.unwrap();
                                 } else if channel.get_users().contains(&user.nickname) {
-                                    let response = irc::commandf::join_announce(&user.nickname.clone(), &channel.name.clone(), &server_.domain.clone());
+                                    let response = irc::commandf::join_announce(&name, &channel.name.clone(), &server_.domain.clone());
+                                    println!("{} UHHH THE THING IS THE THING {}", &user.nickname, &response);
                                     writer.write_all(&response.as_bytes()).await.unwrap();
                                 } 
+                                println!("ENDING JOIN SEQUENCE");
                             }
                             irc::commandf::IRCMessageType::PRIVMSG => {
                                 println!("{}", msg.clone());

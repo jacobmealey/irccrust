@@ -154,11 +154,11 @@ pub mod commandf {
         return format!(":{} {:0>3} {} :{}!!!\n", host, numeric as u32, username, message);
     }
 
-    pub fn client_join(user: &String, channel: &String, hostname: &String) -> String {
+    pub fn client_join(user: &String, users: &String, channel: &String, hostname: &String) -> String {
         let mut response = String::from("");
         response.push_str(&format!(":{} JOIN {}\n", &user, &channel)[..]);
         response.push_str(&format!(":{} {:0>3} {} = {} :{} \n", 
-                                  hostname, Response::RplUsersstart as u32, user, channel, user)[..]);
+                                  hostname, Response::RplNamreply as u32, user, channel, users)[..]);
         response.push_str(&format!(":{} 366 {} {} :End of NAMES list\n", hostname, user, channel)[..]); 
         return response;
     }
