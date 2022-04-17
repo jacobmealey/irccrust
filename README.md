@@ -1,7 +1,7 @@
 # irccrust
 IRCrust (I-R-crust) 
 
-A dead simple IRC server written _for academia_ currently it isn't even compatible with the RFCs, but its a work in progress. 
+An incredibly crusty IRC server written _for academia_ currently it isn't even compatible with the RFCs, but its a work in progress. 
 Though the plan is to be compatible with [RFC 2810](https://datatracker.ietf.org/doc/html/rfc2810), the main objective is to 
 get server-client relattionship working as outlined in [RFC 2812](https://datatracker.ietf.org/doc/html/rfc2812), and then go 
 on to implement the server-server communication as outlined in [RFC 2813](https://datatracker.ietf.org/doc/html/rfc2813) at a 
