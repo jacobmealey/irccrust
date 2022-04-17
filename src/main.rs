@@ -132,6 +132,10 @@ async fn main() {
                             irc::commandf::IRCMessageType::TOPIC => {
                                 writer.write_all(msg.as_bytes()).await.unwrap();
                             }
+                            irc::commandf::IRCMessageType::QUIT => {
+                                println!("Quiting...");
+                                break;
+                            }
                             // if we haven't implemented it do nothing :)
                             _ => {}
                         }
@@ -210,6 +214,10 @@ fn handle_ingest(server: Arc<Mutex<Server>>, line: &String, user: &mut irc::User
                 let channel = msg.component[0].clone();
                 response = format!(":{} TOPIC {} :{}", &user.nickname, &channel, &topic);
             }
+            irc::commandf::IRCMessageType::QUIT => {
+                server.users.remove(&user.realname);
+            }
+
             _ => {
                 //response = "".to_string();
                 //println!("{}", line);
