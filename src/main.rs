@@ -129,6 +129,9 @@ async fn main() {
                                     writer.write_all(msg.as_bytes()).await.unwrap();
                                 }
                             }
+                            irc::commandf::IRCMessageType::TOPIC => {
+                                writer.write_all(msg.as_bytes()).await.unwrap();
+                            }
                             // if we haven't implemented it do nothing :)
                             _ => {}
                         }
@@ -200,6 +203,13 @@ fn handle_ingest(server: Arc<Mutex<Server>>, line: &String, user: &mut irc::User
                 response = format!(":{} PRIVMSG {} {}", user.nickname.clone(), channel_name.clone(), message.clone());
                 println!("{}", line);
             }                            
+            irc::commandf::IRCMessageType::TOPIC => {
+                println!("{}", &msg.component[0]);
+                let topic_split: Vec<&str> = line.split(":").collect();
+                let topic = topic_split[1];
+                let channel = msg.component[0].clone();
+                response = format!(":{} TOPIC {} :{}", &user.nickname, &channel, &topic);
+            }
             _ => {
                 //response = "".to_string();
                 //println!("{}", line);
