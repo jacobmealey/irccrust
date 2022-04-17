@@ -76,67 +76,7 @@ async fn main() {
 
                         // Entering the locked section of the thread, this is where the server
                         // state will be mutated and worked on.
-                        { 
-                            let mut server = server.lock().unwrap();
-                            if result.unwrap() == 0 {
-                                break;
-                            }
-                            
-                            // loop through the messages and decode them, update state accordingly
-                            // pass the decoded messages to the transmit section
-                            for msg in messages {
-                                msg_type = msg.msg_type;
-                                match msg_type {
-                                    // this section should only match the message types that
-                                    // directly modify the state? maybe? idk, just food for though.
-                                    irc::commandf::IRCMessageType::USER => {
-                                        let realname= msg.component[0].clone();
-                                        if server.users.contains_key(&realname.clone()) {
-                                            println!("USER already exists!");
-                                            response = irc::commandf::server_client(&server.domain,
-                                                        irc::Response::RplErrAlreadyReg, &"".to_string(), 
-                                                        &"User already registered".to_string());
-                                        } else {
-                                            user.realname = realname.clone();
-                                            server.users.insert(user.realname.clone(), user.clone());
-                                            response = irc::commandf::server_client(&server.domain, 
-                                                irc::Response::RplWelcome, &user.nickname, 
-                                                &"Weclome to IRCrust!".to_string());
-                                        }
-                                    }
-                                    irc::commandf::IRCMessageType::NICK => {
-                                        user.nickname = msg.component[0].clone();
-                                    }
-                                    irc::commandf::IRCMessageType::JOIN => {
-                                        let channel = match server.channels.get_mut(&msg.component[0].clone()) {
-                                            Some(channel) => channel,
-                                            None => {
-                                                // add the channel
-                                                server.add_channel(msg.component[0].clone());
-                                                // we can be sure we added it now?
-                                                server.channels.get_mut(&msg.component[0].clone()).unwrap()
-                                            }
-
-                                        };
-                                        channel.add_user(user.nickname.clone());
-                                        let names = channel.get_users().join(" ");
-                                        response = irc::commandf::client_join(&user.nickname, &names, &msg.component[0], &server.domain.clone());
-                                    }
-                                    irc::commandf::IRCMessageType::PRIVMSG  => {
-                                        response = line.clone();
-                                        let (channel_name, message) = irc::commandf::privmsg_decode(&response).unwrap();
-                                        // This is gauranteed because can't send message if not in
-                                        // channel?
-                                        response = format!(":{} PRIVMSG {} {}", user.nickname.clone(), channel_name.clone(), message.clone());
-                                        println!("{}", line);
-                                    }                            
-                                    _ => {
-                                        //response = "".to_string();
-                                        //println!("{}", line);
-                                    }
-                                }
-                            }
-                        } 
+                        (response, msg_type) = handle_ingest(Arc::clone(&server), &line, &mut user);                         
                         // release server lock
                         println!("Response:{}", response);
 
@@ -203,3 +143,65 @@ async fn main() {
         
 }
 
+
+fn handle_ingest(server: Arc<Mutex<Server>>, line: &String, user: &mut irc::User) -> (String, irc::commandf::IRCMessageType) { 
+    let mut server = server.lock().unwrap();
+    let messages = irc::commandf::message_decode(line.clone());
+    let mut response = String::from("");
+    let mut mesgtype: irc::commandf::IRCMessageType = irc::commandf::IRCMessageType::UNKNOWN; 
+    // loop through the messages and decode them, update state accordingly
+    // pass the decoded messages to the transmit section
+    for msg in messages {
+        mesgtype = msg.msg_type;
+        match mesgtype {
+            // this section should only match the message types that
+            // directly modify the state? maybe? idk, just food for though.
+            irc::commandf::IRCMessageType::USER => {
+                let realname= msg.component[0].clone();
+                if server.users.contains_key(&realname.clone()) {
+                    println!("USER already exists!");
+                    response = irc::commandf::server_client(&server.domain,
+                                                            irc::Response::RplErrAlreadyReg, &"".to_string(), 
+                                                            &"User already registered".to_string());
+                } else {
+                    user.realname = realname.clone();
+                    server.users.insert(user.realname.clone(), user.clone());
+                    response = irc::commandf::server_client(&server.domain, 
+                                                            irc::Response::RplWelcome, &user.nickname, 
+                                                            &"Weclome to IRCrust!".to_string());
+                }
+            }
+            irc::commandf::IRCMessageType::NICK => {
+                user.nickname = msg.component[0].clone();
+            }
+            irc::commandf::IRCMessageType::JOIN => {
+                let channel = match server.channels.get_mut(&msg.component[0].clone()) {
+                    Some(channel) => channel,
+                    None => {
+                        // add the channel
+                        server.add_channel(msg.component[0].clone());
+                        // we can be sure we added it now?
+                        server.channels.get_mut(&msg.component[0].clone()).unwrap()
+                    }
+
+                };
+                channel.add_user(user.nickname.clone());
+                let names = channel.get_users().join(" ");
+                response = irc::commandf::client_join(&user.nickname, &names, &msg.component[0], &server.domain.clone());
+            }
+            irc::commandf::IRCMessageType::PRIVMSG  => {
+                response = line.clone();
+                let (channel_name, message) = irc::commandf::privmsg_decode(&response).unwrap();
+                // This is gauranteed because can't send message if not in
+                // channel?
+                response = format!(":{} PRIVMSG {} {}", user.nickname.clone(), channel_name.clone(), message.clone());
+                println!("{}", line);
+            }                            
+            _ => {
+                //response = "".to_string();
+                //println!("{}", line);
+            }
+        }
+    }
+    return (response, mesgtype);
+}
