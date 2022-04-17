@@ -1,8 +1,7 @@
 // IRCrust: main.rs
 // Author: Jacob Mealey <jacob.mealey@maine.edu>
 // Main code for IRCrust (pronounced I-R-crust)
-// a "simple" IRC server written in rust because
-// I don't like being happy?
+// a crusty IRC server written in rust because
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
