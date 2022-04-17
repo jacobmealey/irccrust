@@ -10,6 +10,12 @@ mod irc;
 
 const ADDR: &str = "localhost:3030";
 
+// The server structure has is passed around between different
+// threads. it has 3 members, a hashmap of the channels where 
+// the channel name is the key of the value is the channel object, 
+// a hash map of the users where the users realname is the key
+// and the user object is the value. and domain is the name of 
+// the server.
 #[derive(Clone)]
 struct Server {
     pub channels: Box<HashMap::<String, irc::channel::Channel>>,
@@ -18,6 +24,7 @@ struct Server {
 }
 
 impl Server {
+    // create a new server instance
     pub fn new(host: String) -> Server {
         return Server {
             channels: Box::new(HashMap::<String, irc::channel::Channel>::new()),
@@ -26,10 +33,12 @@ impl Server {
         }
     }
     
+    // add a new empty channel 
     pub fn add_channel(&mut self, name: String) {
         println!("Attempting to create channel: {}", name.clone());
         self.channels.insert(name.clone(), irc::channel::Channel::new(&name));
     }
+
 }
 
 #[tokio::main]
@@ -41,8 +50,10 @@ async fn main() {
     };
 
 
+    // thread safe locking of the server data
     let server_lock = Arc::new(Mutex::new(Server::new(String::from("localhost")))); 
     
+    // creates channels to send data between threads 
     let (tx, _rx) = broadcast::channel(10);
 
     // This loops creates a new thread and keeps them alive as long as their is a 
@@ -71,6 +82,7 @@ async fn main() {
                     _result = reader.read_line(&mut line) => {
                         let msg_type: irc::commandf::IRCMessageType;
                         let response: String;
+
                         println!("Incoming: {}", &line);
 
                         // Entering the locked section of the thread, this is where the server
@@ -82,12 +94,13 @@ async fn main() {
                     // only holds the lock for a brief time to make a copy of the server state,
                     // this is then used for outgoing messages to the clients.
                     } result = rx.recv() => {
-                        // this part should NEVER mutate the server -- this is for updating 
+                        // this part should NEVER mutate the server -- this is for 
                         // updating all clients with current state of this biddy
                         let server_ : Server; 
                         {
                             server_ = server.lock().unwrap().clone();
                         }
+
                         let (mtype, msg, name) = result.unwrap();
                         let messages = irc::commandf::message_decode(msg.clone());
                         println!("Outgoing: {}", msg);
@@ -147,6 +160,9 @@ async fn main() {
 }
 
 
+// Handle ingest is a used to manipulate data coming in to the server 
+// from different clients, it returns the response as a string and the
+// message type. 
 fn handle_ingest(server: Arc<Mutex<Server>>, line: &String, user: &mut irc::User) -> (String, irc::commandf::IRCMessageType) { 
     let mut server = server.lock().unwrap();
     let messages = irc::commandf::message_decode(line.clone());
@@ -217,10 +233,7 @@ fn handle_ingest(server: Arc<Mutex<Server>>, line: &String, user: &mut irc::User
                 server.users.remove(&user.realname);
             }
 
-            _ => {
-                //response = "".to_string();
-                //println!("{}", line);
-            }
+            _ => {}
         }
     }
     return (response, mesgtype);
