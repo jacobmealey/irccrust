@@ -69,17 +69,15 @@ async fn main() {
 
                     // This first select is for incoming data from the clients, it ingests it and
                     // makes modifications to the state of the server
-                    result = reader.read_line(&mut line) => {
-                        let mut msg_type: irc::commandf::IRCMessageType = irc::commandf::IRCMessageType::UNKNOWN;
-                        let mut response = String::from("");
-                        let messages = irc::commandf::message_decode(line.clone());
+                    _result = reader.read_line(&mut line) => {
+                        let msg_type: irc::commandf::IRCMessageType;
+                        let response: String;
+                        println!("Incoming: {}", &line);
 
                         // Entering the locked section of the thread, this is where the server
                         // state will be mutated and worked on.
                         (response, msg_type) = handle_ingest(Arc::clone(&server), &line, &mut user);                         
                         // release server lock
-                        println!("Response:{}", response);
-
                         tx.send((msg_type, response.clone(), user.realname.clone())).unwrap();
                     // this select is for outgoing messages from the server to the clients, this
                     // only holds the lock for a brief time to make a copy of the server state,
@@ -93,6 +91,7 @@ async fn main() {
                         }
                         let (mtype, msg, name) = result.unwrap();
                         let messages = irc::commandf::message_decode(msg.clone());
+                        println!("Outgoing: {}", msg);
                         match mtype {
                             irc::commandf::IRCMessageType::USER => {
                                 if name == user.realname.clone() {
@@ -100,9 +99,7 @@ async fn main() {
                                 } 
                             }
                             irc::commandf::IRCMessageType::NICK => {
-                                if name == user.realname.clone() {
-                                    writer.write_all(&msg.as_bytes()).await.unwrap();
-                                } 
+                                writer.write_all(&msg.as_bytes()).await.unwrap();
                             }
                             irc::commandf::IRCMessageType::JOIN => {
                                 // get the channel name from the message
@@ -172,7 +169,13 @@ fn handle_ingest(server: Arc<Mutex<Server>>, line: &String, user: &mut irc::User
                 }
             }
             irc::commandf::IRCMessageType::NICK => {
+                let old_nick = user.nickname.clone();
                 user.nickname = msg.component[0].clone();
+                if old_nick.is_empty() {
+                    response = format!(":NICK {}\n", &user.nickname);
+                } else {
+                    response = format!(":{} NICK {}\n", &old_nick, &user.nickname);
+                }
             }
             irc::commandf::IRCMessageType::JOIN => {
                 let channel = match server.channels.get_mut(&msg.component[0].clone()) {
